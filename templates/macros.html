@@ -333,6 +333,7 @@
             <tr>
                 <td>{{ team }}</td>
                 <td>
+                    <!-- Nested table to display each team's roster and each player's stats -->
                     <table>
                     <tr>
                         <th>Player</th>
@@ -358,59 +359,61 @@
                         {% else %}
                             {% set color = 'red' %}
                         {% endif %}
-                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['FG%']}}</td> <!-- FG% -->
-                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['FGM']}}</td> <!-- FGM -->
-                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['FGA']}}</td> <!-- FGA -->
+                        <!-- Sorry for the repeated code here! -->
+                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['FG%']}}</td>
+                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['FGM']}}</td>
+                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['FGA']}}</td>
                         {% if team_rosters[team][player]['2023 Season']['FT%'] > season_rosters[team]['FT%'] %}
                             {% set color = 'green' %}
                         {% else %}
                             {% set color = 'red' %}
                         {% endif %}
-                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['FT%']}}</td> <!-- FT% -->
-                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['FTM']}}</td> <!-- FTM -->
-                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['FTA']}}</td> <!-- FTA -->
+                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['FT%']}}</td>
+                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['FTM']}}</td>
+                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['FTA']}}</td>
                         {% if team_rosters[team][player]['2023 Season']['3PM'] > season_rosters[team]['3PM'] %}
                             {% set color = 'green' %}
                         {% else %}
                             {% set color = 'red' %}
                         {% endif %}
-                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['3PM']}}</td> <!-- 3PM -->
+                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['3PM']}}</td>
                         {% if team_rosters[team][player]['2023 Season']['REB'] > season_rosters[team]['REB'] %}
                             {% set color = 'green' %}
                         {% else %}
                             {% set color = 'red' %}
                         {% endif %}
-                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['REB']}}</td> <!-- REB -->
+                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['REB']}}</td>
                         {% if team_rosters[team][player]['2023 Season']['AST'] > season_rosters[team]['AST'] %}
                             {% set color = 'green' %}
                         {% else %}
                             {% set color = 'red' %}
                         {% endif %}
-                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['AST']}}</td> <!-- AST -->
+                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['AST']}}</td>
                         {% if team_rosters[team][player]['2023 Season']['STL'] > season_rosters[team]['STL'] %}
                             {% set color = 'green' %}
                         {% else %}
                             {% set color = 'red' %}
                         {% endif %}
-                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['STL']}}</td> <!-- STL -->
+                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['STL']}}</td>
                         {% if team_rosters[team][player]['2023 Season']['BLK'] > season_rosters[team]['BLK'] %}
                             {% set color = 'green' %}
                         {% else %}
                             {% set color = 'red' %}
                         {% endif %}
-                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['BLK']}}</td> <!-- BLK -->
+                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['BLK']}}</td>
+                        <!-- flipped the conditional for turnovers -->
                         {% if team_rosters[team][player]['2023 Season']['TO'] < season_rosters[team]['TO'] %}
                             {% set color = 'green' %}
                         {% else %}
                             {% set color = 'red' %}
                         {% endif %}
-                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['TO']}}</td> <!-- TO  -->
+                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['TO']}}</td>
                         {% if team_rosters[team][player]['2023 Season']['PTS'] > season_rosters[team]['PTS'] %}
                             {% set color = 'green' %}
                         {% else %}
                             {% set color = 'red' %}
                         {% endif %}
-                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['PTS']}}</td> <!-- PTS  -->
+                        <td style="color:{{ color }}">{{team_rosters[team][player]['2023 Season']['PTS']}}</td>
                 {% endfor %}
                     </tr>
                 </table>

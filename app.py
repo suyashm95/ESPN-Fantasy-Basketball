@@ -144,6 +144,7 @@ def roster_analyzer():
     cleaned_up_season_values = cleanup_season_values_and_get_average_per_roster_spot(season_values[4], team_rosters)
     return render_template('roster_analyzer.html', team_rosters=team_rosters, season_values=cleaned_up_season_values)
 
+
 def endpoints_setup(is_season_data):
     league_id = request.args.get('leagueId')
     app.logger.info('League ID: %s', str(league_id))
@@ -607,16 +608,13 @@ def call_api(url, params=None, headers=None):
     return data
 
 
-# get all players and the max number of games played this season
+# get each team's rostered players
 def get_each_teams_players():
     league_id = request.args.get('leagueId')
     url = f'https://fantasy.espn.com/apis/v3/games/fba/seasons/{app.config.get("SEASON")}/segments/0/leagues/{league_id}'
     params = {
         'view': 'mRoster'
     }
-    # filters = {"filterActive": {"value": True}}
-    # headers = {'x-fantasy-filter': json.dumps(filters)}
-    # data = call_api(url, params, headers)
     data = call_api(url, params)
     team_rosters = {}
     team_dict = get_team_dict(league_id)
@@ -624,22 +622,29 @@ def get_each_teams_players():
         team_roster = {}
         team_players = team['roster']['entries']
         for player in team_players:
-            fullName = player['playerPoolEntry']['player']['fullName']
-            team_roster[fullName] = stats_cleanup(player['playerPoolEntry']['player']['stats'])
+            full_name = player['playerPoolEntry']['player']['fullName']
+            team_roster[full_name] = stats_cleanup(player['playerPoolEntry']['player']['stats'])
+        # Store the roster and each player's stats in a dict of team roster by team names
         team_rosters[team_dict[team["id"]]] = team_roster
     return team_rosters
 
 
 def stats_cleanup(stats):
+    # The stats dict has a couple of different average stats. We can find the actual stat timeframe using the
+    # following info:
     # seasonId: season end year
     # stat source: 0 = actual, 1 = projected
     # stat split type: 0 = season, 1 = 7 days, 2 = 15 days, 3 = 30 days
+    current_year = int(app.config.get("SEASON"))
+    previous_year = current_year - 1
     cleaned_up_stats = {}
     for stat in stats:
-        if stat['seasonId'] == 2023 and stat['statSourceId'] == 0:
+        if stat['seasonId'] == current_year and stat['statSourceId'] == 0:
             if stat['statSplitTypeId'] == 0:
-                cleaned_up_stats["2023 Season"] = {"FG%": 0, "FGM": 0, "FGA": 0, "FT%": 0, "FTM": 0, "FTA": 0, "3PM": 0,
-                                                   "REB": 0, "AST": 0, "STL": 0, "BLK": 0, "TO": 0, "PTS": 0, "GP": 0}
+                cleaned_up_stats[str(current_year) + " Season"] = {"FG%": 0, "FGM": 0, "FGA": 0, "FT%": 0, "FTM": 0,
+                                                                   "FTA": 0, "3PM": 0,
+                                                                   "REB": 0, "AST": 0, "STL": 0, "BLK": 0, "TO": 0,
+                                                                   "PTS": 0, "GP": 0}
             elif stat['statSplitTypeId'] == 1:
                 cleaned_up_stats["Last 7"] = {"FG%": 0, "FGM": 0, "FGA": 0, "FT%": 0, "FTM": 0, "FTA": 0, "3PM": 0,
                                               "REB": 0, "AST": 0, "STL": 0, "BLK": 0, "TO": 0, "PTS": 0}
@@ -649,56 +654,68 @@ def stats_cleanup(stats):
             elif stat['statSplitTypeId'] == 3:
                 cleaned_up_stats["Last 30"] = {"FG%": 0, "FGM": 0, "FGA": 0, "FT%": 0, "FTM": 0, "FTA": 0, "3PM": 0,
                                                "REB": 0, "AST": 0, "STL": 0, "BLK": 0, "TO": 0, "PTS": 0}
-        elif stat['seasonId'] == 2023:
-            cleaned_up_stats["2023 Projections"] = {"FG%": 0, "FGM": 0, "FGA": 0, "FT%": 0, "FTM": 0, "FTA": 0,
-                                                    "3PM": 0, "REB": 0, "AST": 0, "STL": 0, "BLK": 0, "TO": 0, "PTS": 0}
-        elif stat['seasonId'] == 2022 and stat['statSourceId'] == 0:
-            cleaned_up_stats["2022 Season"] = {"FG%": 0, "FGM": 0, "FGA": 0, "FT%": 0, "FTM": 0, "FTA": 0, "3PM": 0,
-                                               "REB": 0, "AST": 0, "STL": 0, "BLK": 0, "TO": 0, "PTS": 0}
+        elif stat['seasonId'] == current_year:
+            cleaned_up_stats[str(current_year) + " Projections"] = {"FG%": 0, "FGM": 0, "FGA": 0, "FT%": 0, "FTM": 0,
+                                                                    "FTA": 0,
+                                                                    "3PM": 0, "REB": 0, "AST": 0, "STL": 0, "BLK": 0,
+                                                                    "TO": 0, "PTS": 0}
+        elif stat['seasonId'] == previous_year and stat['statSourceId'] == 0:
+            cleaned_up_stats[str(previous_year) + " Season"] = {"FG%": 0, "FGM": 0, "FGA": 0, "FT%": 0, "FTM": 0,
+                                                                "FTA": 0, "3PM": 0,
+                                                                "REB": 0, "AST": 0, "STL": 0, "BLK": 0, "TO": 0,
+                                                                "PTS": 0}
 
+    # Currently only the current season stats are used. We can use the other stats with a drop down on the UI though
     i = 0
     for stat_timeframe in cleaned_up_stats:
-        if 'averageStats' not in stats[i]:
-            i += 1
-            continue
-        if stats[i]['seasonId'] == 2023 and stats[i]['statSourceId'] == 0 and stats[i]['statSplitTypeId'] == 0:
-            cleaned_up_stats[stat_timeframe]["GP"] = stats[i]['stats']["42"]
-        if "19" in stats[i]['averageStats']:
-            cleaned_up_stats[stat_timeframe]["FG%"] = round(stats[i]['averageStats']["19"], 3)
-        if "13" in stats[i]['averageStats']:
-            cleaned_up_stats[stat_timeframe]["FGM"] = round(stats[i]['averageStats']["13"], 3)
-        if "14" in stats[i]['averageStats']:
-            cleaned_up_stats[stat_timeframe]["FGA"] = round(stats[i]['averageStats']["14"], 3)
-        if "20" in stats[i]['averageStats']:
-            cleaned_up_stats[stat_timeframe]["FT%"] = round(stats[i]['averageStats']["20"], 3)
-        if "15" in stats[i]['averageStats']:
-            cleaned_up_stats[stat_timeframe]["FTM"] = round(stats[i]['averageStats']["15"], 3)
-        if "16" in stats[i]['averageStats']:
-            cleaned_up_stats[stat_timeframe]["FTA"] = round(stats[i]['averageStats']["16"], 3)
-        if "17" in stats[i]['averageStats']:
-            cleaned_up_stats[stat_timeframe]["3PM"] = round(stats[i]['averageStats']["17"], 3)
-        if "6" in stats[i]['averageStats']:
-            cleaned_up_stats[stat_timeframe]["REB"] = round(stats[i]['averageStats']["6"], 3)
-        if "3" in stats[i]['averageStats']:
-            cleaned_up_stats[stat_timeframe]["AST"] = round(stats[i]['averageStats']["3"], 3)
-        if "2" in stats[i]['averageStats']:
-            cleaned_up_stats[stat_timeframe]["STL"] = round(stats[i]['averageStats']["2"], 3)
-        if "1" in stats[i]['averageStats']:
-            cleaned_up_stats[stat_timeframe]["BLK"] = round(stats[i]['averageStats']["1"], 3)
-        if "11" in stats[i]['averageStats']:
-            cleaned_up_stats[stat_timeframe]["TO"] = round(stats[i]['averageStats']["11"], 3)
-        if "0" in stats[i]['averageStats']:
-            cleaned_up_stats[stat_timeframe]["PTS"] = round(stats[i]['averageStats']["0"], 3)
+        if 'averageStats' in stats[i]:
+            if stats[i]['seasonId'] == current_year and stats[i]['statSourceId'] == 0 and stats[i]['statSplitTypeId'] == 0:
+                cleaned_up_stats[stat_timeframe]["GP"] = stats[i]['stats']["42"]
+                # We use the total number of games played for the current season to help us with stat comparisons later
+            if "19" in stats[i]['averageStats']:
+                # Only show up to 3 decimal points for a cleaner display
+                cleaned_up_stats[stat_timeframe]["FG%"] = round(stats[i]['averageStats']["19"], 3)
+            if "13" in stats[i]['averageStats']:
+                cleaned_up_stats[stat_timeframe]["FGM"] = round(stats[i]['averageStats']["13"], 3)
+            if "14" in stats[i]['averageStats']:
+                cleaned_up_stats[stat_timeframe]["FGA"] = round(stats[i]['averageStats']["14"], 3)
+            if "20" in stats[i]['averageStats']:
+                cleaned_up_stats[stat_timeframe]["FT%"] = round(stats[i]['averageStats']["20"], 3)
+            if "15" in stats[i]['averageStats']:
+                cleaned_up_stats[stat_timeframe]["FTM"] = round(stats[i]['averageStats']["15"], 3)
+            if "16" in stats[i]['averageStats']:
+                cleaned_up_stats[stat_timeframe]["FTA"] = round(stats[i]['averageStats']["16"], 3)
+            if "17" in stats[i]['averageStats']:
+                cleaned_up_stats[stat_timeframe]["3PM"] = round(stats[i]['averageStats']["17"], 3)
+            if "6" in stats[i]['averageStats']:
+                cleaned_up_stats[stat_timeframe]["REB"] = round(stats[i]['averageStats']["6"], 3)
+            if "3" in stats[i]['averageStats']:
+                cleaned_up_stats[stat_timeframe]["AST"] = round(stats[i]['averageStats']["3"], 3)
+            if "2" in stats[i]['averageStats']:
+                cleaned_up_stats[stat_timeframe]["STL"] = round(stats[i]['averageStats']["2"], 3)
+            if "1" in stats[i]['averageStats']:
+                cleaned_up_stats[stat_timeframe]["BLK"] = round(stats[i]['averageStats']["1"], 3)
+            if "11" in stats[i]['averageStats']:
+                cleaned_up_stats[stat_timeframe]["TO"] = round(stats[i]['averageStats']["11"], 3)
+            if "0" in stats[i]['averageStats']:
+                cleaned_up_stats[stat_timeframe]["PTS"] = round(stats[i]['averageStats']["0"], 3)
         i += 1
     return cleaned_up_stats
 
 
 def cleanup_season_values_and_get_average_per_roster_spot(season_values, team_rosters):
+    current_year = app.config.get("SEASON")
     cleaned_up = {}
     for teams_season_value in season_values:
         number_of_games = 0
         for player in team_rosters[teams_season_value[0]]:
-            number_of_games += team_rosters[teams_season_value[0]][player]["2023 Season"]["GP"]
+            # Iterate through each team's roster and calculate how many games each player has played this season.
+            # We use this to divide season total stats (non percentage stats) to determine if each rostered player helps
+            # or hurts a team in that category. This isn't perfect though. Some things to consider:
+            # Was the player benched?
+            # Was the player streamed?
+            # If number of games is incorrect, we incorrectly show if a user helps or hurts a team's category
+            number_of_games += team_rosters[teams_season_value[0]][player][current_year + " Season"]["GP"]
         categories = {"FG%": float(teams_season_value[1]), "FT%": float(teams_season_value[2]),
                       "3PM": float(teams_season_value[3]) / number_of_games,
                       "REB": float(teams_season_value[4]) / number_of_games,
